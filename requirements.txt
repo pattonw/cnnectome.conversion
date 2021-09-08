@@ -1,0 +1,3 @@
+git+git://github.com/funkelab/funlib.geometry@287bcd6c90cf1818a6df0beaec78b439971691f8#egg=funlib.geometry
+git+git://github.com/pattonw/funlib.learn.torch@cosem-model-conversion
+numpy

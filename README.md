@@ -1,0 +1,1 @@
+# Scripts and requirements for converting CNNectome trained tensorflow models to pytorch
