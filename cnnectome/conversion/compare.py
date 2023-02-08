@@ -19,7 +19,11 @@ def compare(tf_path, torch_model, test_data=None):
         saver = tf.compat.v1.train.import_meta_graph(f"{tf_path}.meta")
         saver.restore(sess, f"{tf_path}")
         tf_input = graph.get_tensor_by_name("Placeholder:0")
-        tf_output = graph.get_tensor_by_name("Reshape_1:0")
+        final_up_conv = len(torch_model) == 4
+        if final_up_conv:
+            tf_output = graph.get_tensor_by_name("Reshape_3:0")
+        else:
+            tf_output = graph.get_tensor_by_name("Reshape_1:0")
         tf_output_dict = {"out": tf_output}
 
         """
