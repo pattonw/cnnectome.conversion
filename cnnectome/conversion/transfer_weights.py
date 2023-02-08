@@ -1,17 +1,31 @@
 import torch
 import tensorflow as tf
 import numpy as np
+from pprint import pprint
 
 
 def transfer_weights(tf_path, torch_model):
+    debug = False
+    if debug:
+        tf_vars = tf.train.list_variables(tf_path)
+        pprint(tf_vars)
+        raise Exception("Printed list of variables")
+
     torch_unet = torch_model[0]
+    num_layers = len(torch_model)
+    final_up_conv = num_layers == 4
     num_down_kernels = [len(kernel) for kernel in torch_unet.kernel_size_down]
     num_up_kernels = [len(kernel) for kernel in torch_unet.kernel_size_up]
+    if final_up_conv:
+        num_kernels_final = len(torch_model[2].conv_pass) // 2
     # tensorflow to torch map for tensor naming convention
     tensors = {"bias": "bias", "kernel": "weight"}
 
     # generate list of tuple pairs: (tensorflow layer name, torch layer path)
     tf_tensor_names = []
+
+    # Add UNet weights and biases
+    # left conv passes
     tf_tensor_names += [
         (
             f"unet_layer_{layer}_left_{conv}/{tensor}",
@@ -21,6 +35,7 @@ def transfer_weights(tf_path, torch_model):
         for conv in range(num_down_kernels[layer])
         for tensor in ["bias", "kernel"]
     ]
+    # right conv passes
     tf_tensor_names += [
         (
             f"unet_layer_{layer}_right_{conv}/{tensor}",
@@ -38,10 +53,6 @@ def transfer_weights(tf_path, torch_model):
         for conv in range(num_up_kernels[layer])
         for tensor in ["bias", "kernel"]
     ]
-    tf_tensor_names += [
-        (f"conv_pass_0/{tensor}", ["1", tensors[tensor]])
-        for tensor in ["bias", "kernel"]
-    ]
     # constant upsample
     tf_tensor_names += [
         (
@@ -50,6 +61,30 @@ def transfer_weights(tf_path, torch_model):
         )
         for layer in range(len(num_up_kernels))
     ]
+
+    # final layers:
+    if not final_up_conv:
+        # just a 1x1x1 kernel
+        tf_tensor_names += [
+            (f"conv_pass_0/{tensor}", ["1", tensors[tensor]])
+            for tensor in ["bias", "kernel"]
+        ]
+    else:
+        tf_tensor_names.append(
+            (f"up_final_kernel_variables", ["1", "up", "1", "weight"])
+        )
+        tf_tensor_names += [
+            (
+                f"final_conv_{conv}/{tensor}",
+                ["2", "conv_pass", f"{conv*2}", f"{tensors[tensor]}"],
+            )
+            for conv in range(num_kernels_final)
+            for tensor in ["bias", "kernel"]
+        ]
+        tf_tensor_names += [
+            (f"conv_pass_0/{tensor}", ["3", tensors[tensor]])
+            for tensor in ["bias", "kernel"]
+        ]
 
     # Retrieve weights from TF checkpoint
     for tf_name, torch_scopes in tf_tensor_names:
