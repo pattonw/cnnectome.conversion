@@ -1,5 +1,5 @@
 To run this test, please copy the checkpoint files from:
-`/nrs/cosem/cosem/training/v0003.2/setup36`
+`https://open.quiltdata.com/b/janelia-cosem-networks/tree/v0003.2setup36`
 into this directory.
 Make sure to pick any checkpoint, and then copy these files:
 - {checkpoint}.data-0000-of-0001
